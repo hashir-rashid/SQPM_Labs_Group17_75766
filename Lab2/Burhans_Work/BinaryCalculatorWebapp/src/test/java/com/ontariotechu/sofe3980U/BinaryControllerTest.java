@@ -58,6 +58,15 @@ public class BinaryControllerTest {
     }
 
     @Test
+    public void postMultiplyByZero() throws Exception {
+        // Edge case: Multiplying by zero (111 * 0 = 0)
+        this.mvc.perform(post("/").param("operand1","111").param("operator","*").param("operand2","0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("result"))
+                .andExpect(model().attribute("result", "0"));
+    }
+
+    @Test
     public void postAnd() throws Exception {
         // Test 1010 & 1100 = 1000
         this.mvc.perform(post("/").param("operand1","1010").param("operator","&").param("operand2","1100"))
@@ -67,11 +76,29 @@ public class BinaryControllerTest {
     }
 
     @Test
+    public void postAndDifferentLengths() throws Exception {
+        // Edge case: Different bit lengths (1111 & 1 = 1)
+        this.mvc.perform(post("/").param("operand1","1111").param("operator","&").param("operand2","1"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("result"))
+                .andExpect(model().attribute("result", "1"));
+    }
+
+    @Test
     public void postOr() throws Exception {
         // Test 1010 | 0101 = 1111
         this.mvc.perform(post("/").param("operand1","1010").param("operator","|").param("operand2","0101"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("result"))
                 .andExpect(model().attribute("result", "1111"));
+    }
+
+    @Test
+    public void postOrWithZero() throws Exception {
+        // Edge case: OR with zero (1100 | 0 = 1100)
+        this.mvc.perform(post("/").param("operand1","1100").param("operator","|").param("operand2","0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("result"))
+                .andExpect(model().attribute("result", "1100"));
     }
 }
