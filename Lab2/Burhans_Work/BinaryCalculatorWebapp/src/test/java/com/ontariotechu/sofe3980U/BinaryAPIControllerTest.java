@@ -7,98 +7,89 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 
 import org.junit.runner.RunWith;
 import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
-@WebMvcTest(BinaryController.class)
-public class BinaryControllerTest {
+@WebMvcTest(BinaryAPIController.class)
+public class BinaryAPIControllerTest {
 
     @Autowired
     private MockMvc mvc;
 
     @Test
-    public void getDefault() throws Exception {
-        this.mvc.perform(get("/"))
+    public void add() throws Exception {
+        this.mvc.perform(get("/add").param("operand1","111").param("operand2","1010"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("calculator"))
-                .andExpect(model().attribute("operand1", ""))
-                .andExpect(model().attribute("operand1Focused", false));
+                .andExpect(content().string("10001"));
     }
 
     @Test
-    public void getParameter() throws Exception {
-        this.mvc.perform(get("/").param("operand1","111"))
+    public void add2() throws Exception {
+        this.mvc.perform(get("/add_json").param("operand1","111").param("operand2","1010"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("calculator"))
-                .andExpect(model().attribute("operand1", "111"))
-                .andExpect(model().attribute("operand1Focused", true));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.operand1").value(111))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.operand2").value(1010))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.result").value(10001))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.operator").value("add"));
+    }
+
+    // --- MULTIPLY TESTS ---
+
+    @Test
+    public void multiply() throws Exception {
+        // Test 10 * 11 = 110 (2 * 3 = 6)
+        this.mvc.perform(get("/multiply").param("operand1","10").param("operand2","11"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("110"));
     }
 
     @Test
-    public void postParameter() throws Exception {
-        this.mvc.perform(post("/").param("operand1","111").param("operator","+").param("operand2","111"))
+    public void multiplyByZero() throws Exception {
+        // Edge case: Multiplying by zero (101 * 0 = 0)
+        this.mvc.perform(get("/multiply").param("operand1","101").param("operand2","0"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1110"))
-                .andExpect(model().attribute("operand1", "111"));
+                .andExpect(content().string("0"));
     }
 
-    // --- NEW DESIGN TEST CASES FOR WEB APPLICATION ---
+    // --- AND TESTS ---
 
     @Test
-    public void postMultiply() throws Exception {
-        // Test 101 * 11 = 1111 (5 * 3 = 15)
-        this.mvc.perform(post("/").param("operand1","101").param("operator","*").param("operand2","11"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1111"));
-    }
-
-    @Test
-    public void postMultiplyByZero() throws Exception {
-        // Edge case: Multiplying by zero (111 * 0 = 0)
-        this.mvc.perform(post("/").param("operand1","111").param("operator","*").param("operand2","0"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "0"));
-    }
-
-    @Test
-    public void postAnd() throws Exception {
+    public void andJson() throws Exception {
         // Test 1010 & 1100 = 1000
-        this.mvc.perform(post("/").param("operand1","1010").param("operator","&").param("operand2","1100"))
+        this.mvc.perform(get("/and_json").param("operand1","1010").param("operand2","1100"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1000"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.result").value("1000"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.operator").value("and"));
     }
 
     @Test
-    public void postAndDifferentLengths() throws Exception {
-        // Edge case: Different bit lengths (1111 & 1 = 1)
-        this.mvc.perform(post("/").param("operand1","1111").param("operator","&").param("operand2","1"))
+    public void andDifferentLengths() throws Exception {
+        // Edge case: Different bit lengths (1111 & 1 = 0001)
+        this.mvc.perform(get("/and_json").param("operand1","1111").param("operand2","1"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.result").value("1"));
     }
 
+    // --- OR TESTS ---
+
     @Test
-    public void postOr() throws Exception {
+    public void orJson() throws Exception {
         // Test 1010 | 0101 = 1111
-        this.mvc.perform(post("/").param("operand1","1010").param("operator","|").param("operand2","0101"))
+        this.mvc.perform(get("/or_json").param("operand1","1010").param("operand2","0101"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1111"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.result").value("1111"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.operator").value("or"));
     }
 
     @Test
-    public void postOrWithZero() throws Exception {
-        // Edge case: OR with zero (1100 | 0 = 1100)
-        this.mvc.perform(post("/").param("operand1","1100").param("operator","|").param("operand2","0"))
+    public void orWithZero() throws Exception {
+        // Edge case: OR with zero (1010 | 0 = 1010)
+        this.mvc.perform(get("/or_json").param("operand1","1010").param("operand2","0"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("result"))
-                .andExpect(model().attribute("result", "1100"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.result").value("1010"));
     }
 }
